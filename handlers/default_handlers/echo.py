@@ -1,11 +1,12 @@
-from telebot.types import Message
+from aiogram.types import Message
+from aiogram.filters import Command
+from aiogram.enums import ParseMode
 
-from loader import bot
+from loader import dispatcher
 
 
 # Эхо хендлер, куда летят текстовые сообщения без указанного состояния
-@bot.message_handler(state=None)
-def bot_echo(message: Message):
-    bot.reply_to(
-        message, "Эхо без состояния или фильтра.\n" f"Сообщение: {message.text}"
-    )
+@dispatcher.message()
+async def echo_command(message: Message):
+    await message.answer(f"Я еще не знаком с такой командой: <i>{message.text}</i>\n"
+                         f"Список доступных команд: /help", parse_mode=ParseMode.HTML)

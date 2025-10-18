@@ -1,10 +1,12 @@
-from telebot.types import Message
+from aiogram.types import Message
+from aiogram.filters import Command
+from aiogram.enums import ParseMode
 
-from config_data.config import DEFAULT_COMMANDS
-from loader import bot
+from loader import dispatcher
+from config_data import DEFAULT_COMMANDS
 
 
-@bot.message_handler(commands=["help"])
-def bot_help(message: Message):
+@dispatcher.message(Command("help"))
+async def help_command(message: Message):
     text = [f"/{command} - {desk}" for command, desk in DEFAULT_COMMANDS]
-    bot.reply_to(message, "\n".join(text))
+    await message.answer("<b>Команды: </b>" + "\n".join(text), parse_mode=ParseMode.HTML)
