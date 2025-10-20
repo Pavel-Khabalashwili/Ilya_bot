@@ -1,10 +1,14 @@
+from aiogram import Dispatcher
+
 from . import custom_handlers
 from . import default_handlers
 
-from aiogram import Dispatcher
 
+def register_handlers(dispatcher: Dispatcher):
+    """
+    Регистрирует все обработчики в диспетчере.
+    """
 
-def register_handlers(dp: Dispatcher):
-    dp.include_router(default_handlers.start.router)
-    dp.include_router(default_handlers.help.router)
-    dp.include_router(default_handlers.echo.router)
+    dispatcher.include_router(default_handlers.start_router)
+    dispatcher.include_router(default_handlers.help_router)
+    dispatcher.include_router(default_handlers.echo_router)

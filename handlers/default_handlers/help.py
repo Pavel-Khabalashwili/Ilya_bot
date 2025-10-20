@@ -11,4 +11,4 @@ router = Router()
 @router.message(Command("help"))
 async def help_command(message: Message):
     text = [f"/{command} - {desk}" for command, desk in DEFAULT_COMMANDS]
-    await message.answer("<b>Команды: </b>" + "\n".join(text), parse_mode=ParseMode.HTML)
+    await message.answer("<b>Доступыне команды:</b>\n" + "\n".join(text), parse_mode=ParseMode.HTML)
