@@ -1,0 +1,1 @@
+from .registration_handlers import reg_name_router
