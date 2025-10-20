@@ -1,1 +1,1 @@
-from .registration_states import RegistartionStates
+from .registration_states import RegistartionStates, UserRequest

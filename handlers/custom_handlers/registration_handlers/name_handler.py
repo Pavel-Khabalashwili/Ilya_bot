@@ -3,9 +3,54 @@ from aiogram.enums import ParseMode
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from aiogram.fsm.context import FSMContext
 
-from states import RegistartionStates
+from states import RegistartionStates, UserRequest
 from keyboards import yes_no_keyboard, telephone_keyboard
 from utils.validators import validate_email, validate_name, validate_last_name, validate_phone
+
+
+async def ask_user_request(message: Message, state: FSMContext):
+    """
+    Эта функция:
+    1. Меняет состояние на 'запрос психологу'
+    2. Отправляет сообщение с текстом про запрос
+    3. Показывает кнопки Да/Нет
+    """
+    await state.set_state(UserRequest.define_request)  # Переключаем состояние
+
+    # Отправляем то самое сообщение от психолога
+    await message.answer(
+        text=f"<b>🎯 ОПРЕДЕЛЕНИЕ ЗАПРОСА</b>\n\n"
+             f"Чтобы наша встреча была максимально полезной для вас, я предлагаю заранее обозначить тему разговора.\n\n"
+             f"<b>Что вас беспокоит или что хотели бы обсудить?</b>\n"
+             f"Это может быть конкретная ситуация, вопрос или просто то, что сейчас на душе.\n\n"
+             f"<b>Желаете описать запрос сейчас?</b>",
+        parse_mode=ParseMode.HTML,
+        reply_markup=yes_no_keyboard
+    )
+
+async def complete_registration(message: Message, state: FSMContext, phone: str):
+    """
+    Общая функция для завершения регистрации
+    Убирает дублирование кода
+    """
+    data = await state.get_data()
+
+    name = data["name"]
+    last_name = data["last_name"]
+    email = data["email"]
+
+    await message.answer(
+        text=f"<b>🎉 РЕГИСТРАЦИЯ ЗАВЕРШЕНА!</b>\n\n"
+             f"<b>Ваши данные были сохранены:</b>\n"
+             f"• Имя: <i>{name}</i>\n"
+             f"• Фамилия: <i>{last_name}</i>\n"
+             f"• Email: <i>{email}</i>\n"
+             f"• Телефон: <i>{phone}</i>\n\n"
+             f"Вы всегда можете вызвать команду /edit_profile и отредактировать любое поле!",
+        parse_mode=ParseMode.HTML,
+    )
+
+    await state.clear()
 
 router = Router()
 
@@ -118,56 +163,29 @@ async def reg_tel_manual_handler(message: Message, state: FSMContext):
     phone_validation = validate_phone(user_input)
 
     if phone_validation["is_valid"]:
-        # Сохраняем телефон и завершаем регистрацию
+        # Сохраняем телефон и завершаем регистрацию через общую функцию
         await state.update_data(phone=phone_validation["phone"])
-
-        data = await state.get_data()
-        name = data["name"]
-        last_name = data["last_name"]
-        email = data["email"]
-        phone = phone_validation["phone"]
-
-        await message.answer(
-            text=f"<b>РЕГИСТРАЦИЯ ЗАВЕРШЕНА!</b>\n\n"
-                 f"<b>Ваши данные:</b>\n"
-                 f"• Имя: <i>{name}</i>\n"
-                 f"• Фамилия: <i>{last_name}</i>\n"
-                 f"• Email: <i>{email}</i>\n"
-                 f"• Телефон: <i>{phone}</i>",
-            parse_mode=ParseMode.HTML
-        )
-
-        await state.clear()
+        await complete_registration(message, state, phone_validation["phone"])
+        await ask_user_request(message, state)
     else:
-        # Если телефон невалиден - снова запрашиваем
         await message.answer(
             text=f"❌ {phone_validation['message']}\n\n"
                  f"<b>Пожалуйста, введите корректный номер телефона:</b>\n"
                  f"<i>Пример: +79123456789 или 89123456789</i>",
             parse_mode=ParseMode.HTML
         )
-        # Остаемся в том же состоянии для повторного ввода
 
 
 @router.message(RegistartionStates.tel_number_state, F.contact)
 async def reg_tel_get_handler(message: Message, state: FSMContext):
-    data = await state.get_data()
-
-    name = data["name"]
-    last_name = data["last_name"]
-    email = data["email"]
     phone = message.contact.phone_number
 
+    # Сохраняем телефон и завершаем регистрацию через общую функцию
     await state.update_data(phone=phone)
+    await complete_registration(message, state, phone)
+    await ask_user_request(message, state)
 
-    await message.answer(
-        text=f"<b>РЕГИСТРАЦИЯ ЗАВЕРШЕНА!</b>\n\n"
-             f"<b>Ваши данные:</b>\n"
-             f"• Имя: <i>{name}</i>\n"
-             f"• Фамилия: <i>{last_name}</i>\n"
-             f"• Email: <i>{email}</i>\n"
-             f"• Телефон: <i>{phone}</i>",
-        parse_mode=ParseMode.HTML,
-    )
-
-    await state.clear()
+@router.callback_query(UserRequest.define_request, F.data == "no_button")
+async def user_request_handler(callback: CallbackQuery, state: FSMContext):
+    await callback.message.answer("Вы всегда можете сделать / изменить запрос по команде /make_request из меню.")
+    await callback.answer()
