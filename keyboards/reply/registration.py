@@ -8,5 +8,6 @@ registration_keyboard = ReplyKeyboardMarkup(
         [registration_button]
     ],
     resize_keyboard=True,
-    input_field_placeholder="Нажмите 'РЕГИСТРАЦИЯ', чтобы начать..."
+    input_field_placeholder="Нажмите 'РЕГИСТРАЦИЯ', чтобы начать...",
+    one_time_keyboard=True
 )

@@ -4,7 +4,8 @@ from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from aiogram.fsm.context import FSMContext
 
 from states import RegistartionStates
-from keyboards import yes_no_keyboard
+from keyboards import yes_no_keyboard, telephone_keyboard
+from utils.validators import validate_email, validate_name, validate_last_name, validate_phone
 
 router = Router()
 
@@ -16,21 +17,15 @@ async def reg_name_handler(message: Message, state: FSMContext):
     question = (f"<b>ЭТАП - 1: ПОДТВЕРЖДЕНИЕ ИМЕНИ</b>\n\n"
                 f"Использовать текущее ФИО: <i>{message.from_user.full_name}</i> ?")
 
-    # Убираем реплай-клавиатуру
     await message.answer(
         text=question,
-        reply_markup=ReplyKeyboardRemove(),
-        parse_mode=ParseMode.HTML
-
-    )
-    await message.answer(
-        text="Выберите действие:",
+        parse_mode=ParseMode.HTML,
         reply_markup=yes_no_keyboard,
     )
 
 
 @router.callback_query(F.data == "yes_button", RegistartionStates.name_state)
-async def reg_email_handler(callback: CallbackQuery, state: FSMContext):
+async def reg_name_get_handler(callback: CallbackQuery, state: FSMContext):
     user_data = callback.from_user.full_name.split()
     name = user_data[0]
     last_name = user_data[1]
@@ -41,11 +36,138 @@ async def reg_email_handler(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer(
         text=f"<b>ЭТАП - 2: EM@IL</b>\n\n"
              f"Введите emai:",
-            parse_mode=ParseMode.HTML)
+        parse_mode=ParseMode.HTML)
 
     await callback.answer()
 
-@router.message(RegistartionStates.email_state)
-async def reg_email_answer_handler(callback: CallbackQuery, state: FSMContext):
 
-    pass
+@router.callback_query(F.data == "no_button", RegistartionStates.name_state)
+async def reg_name_input_handler(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(RegistartionStates.name_input_state)
+    await callback.message.answer("Введите ваше имя:")
+    await callback.answer()
+
+@router.message(RegistartionStates.name_input_state)
+async def reg_name_validation_handler(message: Message, state: FSMContext):
+    name_validation = validate_name(message.text)
+
+    if name_validation["is_valid"]:
+        await state.update_data(name=name_validation["name"])
+        await state.set_state(RegistartionStates.lastname_input_state)
+        await message.answer("✅ Имя сохранено!\nТеперь введите фамилию:")
+    else:
+        await message.answer(f"❌ {name_validation['message']}\n\nПожалуйста, введите имя еще раз:")
+
+@router.message(RegistartionStates.lastname_input_state)
+async def reg_lastname_input_handler(message: Message, state: FSMContext):
+    lastname_validation = validate_last_name(message.text)
+
+    if lastname_validation["is_valid"]:
+        await state.update_data(last_name=lastname_validation["last_name"])
+        await state.set_state(RegistartionStates.email_state)
+
+        await message.answer(
+            text=f"<b>ЭТАП - 2: EM@IL</b>\n\n"
+                 f"✅ Фамилия сохранена!\n"
+                 f"Теперь введите email:",
+            parse_mode=ParseMode.HTML
+        )
+    else:
+        await message.answer(f"❌ {lastname_validation['message']}\n\nПожалуйста, введите фамилию еще раз:")
+
+
+@router.message(RegistartionStates.email_state)
+async def reg_email_answer_handler(message: Message, state: FSMContext):
+    user_input = message.text
+    email: dict = validate_email(email=user_input)
+
+    if email["is_valid"]:
+        await state.update_data(email=email['email'])
+        await state.set_state(RegistartionStates.tel_number_state)
+
+        await message.answer(text=f"<b>ЭТАП - 3: НОМЕР ТЕЛЕФОНА</b>\n\n"
+                                  f"Нажмите на отправить номер или ручной ввод",
+                             reply_markup=telephone_keyboard,
+                             parse_mode=ParseMode.HTML)
+    else:
+        await message.answer(
+            text=f"❌ {email['message']}\n\n"
+                 f"<b>Пожалуйста, введите корректный email:</b>\n"
+                 f"<i>Пример: example@mail.ru</i>",
+            parse_mode=ParseMode.HTML
+        )
+
+
+@router.message(RegistartionStates.tel_number_state, F.text == "Ввести номер")
+async def reg_tel_manual_request_handler(message: Message, state: FSMContext):
+    """Обработчик кнопки 'Ввести вручную' - сразу показывает пример и просит ввести номер"""
+    await message.answer(
+        text=f"<b>ВВОД НОМЕРА ТЕЛЕФОНА</b>\n\n"
+             f"📞 <b>Введите ваш номер телефона:</b>\n"
+             f"<i>Пример: +79123456789 или 89123456789</i>\n\n"
+             f"Формат: с кодом страны или без",
+        parse_mode=ParseMode.HTML,
+        reply_markup=ReplyKeyboardRemove()  # Убираем клавиатуру выбора
+    )
+    # Остаемся в том же состоянии для получения номера
+
+
+@router.message(RegistartionStates.tel_number_state, F.text)
+async def reg_tel_manual_handler(message: Message, state: FSMContext):
+    user_input = message.text
+    phone_validation = validate_phone(user_input)
+
+    if phone_validation["is_valid"]:
+        # Сохраняем телефон и завершаем регистрацию
+        await state.update_data(phone=phone_validation["phone"])
+
+        data = await state.get_data()
+        name = data["name"]
+        last_name = data["last_name"]
+        email = data["email"]
+        phone = phone_validation["phone"]
+
+        await message.answer(
+            text=f"<b>РЕГИСТРАЦИЯ ЗАВЕРШЕНА!</b>\n\n"
+                 f"<b>Ваши данные:</b>\n"
+                 f"• Имя: <i>{name}</i>\n"
+                 f"• Фамилия: <i>{last_name}</i>\n"
+                 f"• Email: <i>{email}</i>\n"
+                 f"• Телефон: <i>{phone}</i>",
+            parse_mode=ParseMode.HTML
+        )
+
+        await state.clear()
+    else:
+        # Если телефон невалиден - снова запрашиваем
+        await message.answer(
+            text=f"❌ {phone_validation['message']}\n\n"
+                 f"<b>Пожалуйста, введите корректный номер телефона:</b>\n"
+                 f"<i>Пример: +79123456789 или 89123456789</i>",
+            parse_mode=ParseMode.HTML
+        )
+        # Остаемся в том же состоянии для повторного ввода
+
+
+@router.message(RegistartionStates.tel_number_state, F.contact)
+async def reg_tel_get_handler(message: Message, state: FSMContext):
+    data = await state.get_data()
+
+    name = data["name"]
+    last_name = data["last_name"]
+    email = data["email"]
+    phone = message.contact.phone_number
+
+    await state.update_data(phone=phone)
+
+    await message.answer(
+        text=f"<b>РЕГИСТРАЦИЯ ЗАВЕРШЕНА!</b>\n\n"
+             f"<b>Ваши данные:</b>\n"
+             f"• Имя: <i>{name}</i>\n"
+             f"• Фамилия: <i>{last_name}</i>\n"
+             f"• Email: <i>{email}</i>\n"
+             f"• Телефон: <i>{phone}</i>",
+        parse_mode=ParseMode.HTML,
+    )
+
+    await state.clear()
