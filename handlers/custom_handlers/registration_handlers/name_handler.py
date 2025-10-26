@@ -5,7 +5,11 @@ from aiogram.fsm.context import FSMContext
 
 from states import RegistartionStates, UserRequest
 from keyboards import yes_no_keyboard, telephone_keyboard
-from utils.validators import validate_email, validate_name, validate_last_name, validate_phone
+from utils.validators import (validate_email,
+                              validate_name,
+                              validate_last_name,
+                              validate_phone,
+                              validate_request_comprehensive)
 
 
 async def ask_user_request(message: Message, state: FSMContext):
@@ -51,6 +55,41 @@ async def complete_registration(message: Message, state: FSMContext, phone: str)
     )
 
     await state.clear()
+
+
+async def complete_user_request(message: Message, state: FSMContext, user_request: str = None):
+    """
+    Функция для завершения процесса запроса пользователя
+    """
+    if user_request:
+        # Если передан запрос - сохраняем его
+        await state.update_data(user_request=user_request)
+
+    # Формируем сообщение о завершении запроса
+    if user_request:
+        # Если был введен запрос
+        completion_text = (
+            f"<b>✅ Запрос сохранен!</b>\n\n"
+            f"Психолог ознакомится с вашим запросом перед сеансом.\n\n"
+            f"<i>Ваш запрос:</i>\n"
+            f"<code>{user_request}</code>\n\n"
+            f"Вы всегда можете вызвать команду /make_request и отредактировать или обновить запрос!"
+        )
+    else:
+        # Если запрос не был введен
+        completion_text = (
+            f"<b>📝 Запрос не добавлен</b>\n\n"
+            f"Вы всегда можете добавить или изменить запрос по команде /make_request из меню.\n\n"
+            f"Это поможет психологу лучше подготовиться к сеансу."
+        )
+
+    await message.answer(
+        text=completion_text,
+        parse_mode=ParseMode.HTML,
+    )
+
+    await state.clear()
+
 
 router = Router()
 
@@ -187,5 +226,41 @@ async def reg_tel_get_handler(message: Message, state: FSMContext):
 
 @router.callback_query(UserRequest.define_request, F.data == "no_button")
 async def user_request_handler(callback: CallbackQuery, state: FSMContext):
-    await callback.message.answer("Вы всегда можете сделать / изменить запрос по команде /make_request из меню.")
+    await complete_user_request(callback.message, state)
     await callback.answer()
+    await state.clear()
+
+@router.callback_query(UserRequest.define_request, F.data == "yes_button")
+async def user_request_handler(callback: CallbackQuery, state: FSMContext):
+    task = (f"<b>🎯ЗАПРОС</b>\n\n"
+            f"Запрос в психологии — это то, с чем вы приходите к психологу, "
+            f"основная тема или проблема, которую вы хотите обсудить.\n\n"
+            f"Напишите ваш запрос ниже: ")
+
+    #TODO
+    #Добавить новый текст , на случай если запрос был сделан ранее
+
+    await state.set_state(UserRequest.input_request)
+    await callback.message.answer(task, parse_mode=ParseMode.HTML)
+    await callback.answer()
+
+
+@router.message(UserRequest.input_request)
+async def process_user_request(message: Message, state: FSMContext):
+    """Обрабатываем и валидируем запрос пользователя"""
+    user_input = message.text
+
+    # Валидируем запрос
+    request_validation = validate_request_comprehensive(user_input)
+
+    if request_validation["is_valid"]:
+        await complete_user_request(message, state, request_validation["request"])
+        await state.clear()
+    else:
+        # Если запрос невалиден - просим исправить
+        await message.answer(
+            text=f"❌ {request_validation['message']}\n\n"
+                 f"<b>Пожалуйста, опишите запрос еще раз:</b>\n"
+                 f"<i>Пример: 'Хотел бы обсудить проблемы с тревожностью и стрессом на работе'</i>",
+            parse_mode=ParseMode.HTML
+        )
