@@ -19,6 +19,8 @@ class User(Base):
     email = Column(String(100), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
+    user_requests = relationship("PsychologicalRequest", back_populates="user")
+
     def __repr__(self):
         """Возвращает строковое представление объекта."""
 
@@ -32,6 +34,14 @@ class User(Base):
 class PsychologicalRequest(Base):
     """Класс описывающий запросы пользователя"""
 
+    __tablename__ = "psychological_requests"
+
     id = Column(Integer, primary_key=True)
     request_text = Column(String(2000), nullable=False)
-    status = Column(Boolean, default=False)
+    status = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    user_id = Column(Integer, ForeignKey("users.id"))
+    user = relationship("User", back_populates="user_requests")
+
+    #TODO repr str
