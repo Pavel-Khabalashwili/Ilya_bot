@@ -13,7 +13,5 @@ class RegistartionStates(StatesGroup):
     tel_number_state = State()
     email_state = State()
 
-class UserRequest(StatesGroup):
-    """Состояния для реализации запроса от пользователя"""
-    define_request = State()
-    input_request = State()
+
+

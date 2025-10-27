@@ -10,6 +10,8 @@ def register_handlers(dispatcher: Dispatcher):
     """
     dispatcher.include_router(custom_handlers.reg_name_router)
 
+    dispatcher.include_router(custom_handlers.edit_router)
+
 
     dispatcher.include_router(default_handlers.start_router)
     dispatcher.include_router(default_handlers.help_router)

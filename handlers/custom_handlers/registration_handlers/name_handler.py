@@ -32,6 +32,7 @@ async def ask_user_request(message: Message, state: FSMContext):
         reply_markup=yes_no_keyboard
     )
 
+
 async def complete_registration(message: Message, state: FSMContext, phone: str):
     """
     Общая функция для завершения регистрации
@@ -61,12 +62,11 @@ async def complete_user_request(message: Message, state: FSMContext, user_reques
     """
     Функция для завершения процесса запроса пользователя
     """
+
     if user_request:
+
         # Если передан запрос - сохраняем его
         await state.update_data(user_request=user_request)
-
-    # Формируем сообщение о завершении запроса
-    if user_request:
         # Если был введен запрос
         completion_text = (
             f"<b>✅ Запрос сохранен!</b>\n\n"
@@ -131,6 +131,7 @@ async def reg_name_input_handler(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer("Введите ваше имя:")
     await callback.answer()
 
+
 @router.message(RegistartionStates.name_input_state)
 async def reg_name_validation_handler(message: Message, state: FSMContext):
     name_validation = validate_name(message.text)
@@ -141,6 +142,7 @@ async def reg_name_validation_handler(message: Message, state: FSMContext):
         await message.answer("✅ Имя сохранено!\nТеперь введите фамилию:")
     else:
         await message.answer(f"❌ {name_validation['message']}\n\nПожалуйста, введите имя еще раз:")
+
 
 @router.message(RegistartionStates.lastname_input_state)
 async def reg_lastname_input_handler(message: Message, state: FSMContext):
@@ -224,11 +226,13 @@ async def reg_tel_get_handler(message: Message, state: FSMContext):
     await complete_registration(message, state, phone)
     await ask_user_request(message, state)
 
+
 @router.callback_query(UserRequest.define_request, F.data == "no_button")
 async def user_request_handler(callback: CallbackQuery, state: FSMContext):
     await complete_user_request(callback.message, state)
     await callback.answer()
     await state.clear()
+
 
 @router.callback_query(UserRequest.define_request, F.data == "yes_button")
 async def user_request_handler(callback: CallbackQuery, state: FSMContext):
@@ -237,8 +241,8 @@ async def user_request_handler(callback: CallbackQuery, state: FSMContext):
             f"основная тема или проблема, которую вы хотите обсудить.\n\n"
             f"Напишите ваш запрос ниже: ")
 
-    #TODO
-    #Добавить новый текст , на случай если запрос был сделан ранее
+    # TODO
+    # Добавить новый текст , на случай если запрос был сделан ранее
 
     await state.set_state(UserRequest.input_request)
     await callback.message.answer(task, parse_mode=ParseMode.HTML)
