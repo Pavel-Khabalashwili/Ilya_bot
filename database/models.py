@@ -1,10 +1,8 @@
-from sqlalchemy import create_engine, Boolean, Column, DateTime, Integer, String, ForeignKey, func
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm.decl_api import DeclarativeBase
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, ForeignKey, func
+from sqlalchemy.orm import relationship
 
-Base: DeclarativeBase = declarative_base()
-engine = create_engine('sqlite:///psychology_bot.db')
+from .engine import Base
+
 
 class User(Base):
     """Класс описывающий пользователя"""
