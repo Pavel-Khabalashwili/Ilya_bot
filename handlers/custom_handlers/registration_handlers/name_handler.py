@@ -46,7 +46,7 @@ async def complete_registration(message: Message, state: FSMContext):
     last_name = data["last_name"]
     email = data["email"]
     phone = data["phone"]
-    user_request = data.get("user_request")
+    user_request = data.get("user_request", "**неопределен**")
 
     await message.answer(
         text=f"<b>🎉 РЕГИСТРАЦИЯ ЗАВЕРШЕНА!</b>\n\n"
@@ -92,8 +92,8 @@ async def complete_user_request(message: Message, state: FSMContext, user_reques
         text=completion_text,
         parse_mode=ParseMode.HTML,
     )
+    await complete_registration(message, state)
 
-    await state.clear()
 
 
 router = Router()
@@ -266,7 +266,6 @@ async def process_user_request(message: Message, state: FSMContext):
 
     if request_validation["is_valid"]:
         await complete_user_request(message, state, request_validation["request"])
-        await complete_registration()
     else:
         # Если запрос невалиден - просим исправить
         await message.answer(
@@ -275,3 +274,4 @@ async def process_user_request(message: Message, state: FSMContext):
                  f"<i>Пример: 'Хотел бы обсудить проблемы с тревожностью и стрессом на работе'</i>",
             parse_mode=ParseMode.HTML
         )
+
