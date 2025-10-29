@@ -8,11 +8,15 @@ class DatabaseManager:
 
     def __enter__(self):
         self.session = Session(bind=engine)
-        return self
+        return self.session
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.session.close()
 
         if exc_type:
-            return True
+            self.session.rollback()  # Откат при ошибке
+            print(f"❌ Ошибка: {exc_type.__name__}: {exc_val}")
+        else:
+            self.session.commit()  # Сохранение при успехе
 
+        self.session.close()
+        return False  # НЕ подавляем исключения
