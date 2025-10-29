@@ -12,6 +12,8 @@ class RegistartionStates(StatesGroup):
     lastname_input_state = State()
     tel_number_state = State()
     email_state = State()
+    define_request = State()
+    input_request = State()
 
 
 

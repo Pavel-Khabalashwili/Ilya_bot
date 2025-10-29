@@ -19,7 +19,7 @@ async def ask_user_request(message: Message, state: FSMContext):
     2. Отправляет сообщение с текстом про запрос
     3. Показывает кнопки Да/Нет
     """
-    await state.set_state(UserRequest.define_request)  # Переключаем состояние
+    await state.set_state(RegistartionStates.define_request)  # Переключаем состояние
 
     # Отправляем то самое сообщение от психолога
     await message.answer(
@@ -46,7 +46,7 @@ async def complete_registration(message: Message, state: FSMContext):
     last_name = data["last_name"]
     email = data["email"]
     phone = data["phone"]
-    user_requst = data.get("user_requst")
+    user_request = data.get("user_request")
 
     await message.answer(
         text=f"<b>🎉 РЕГИСТРАЦИЯ ЗАВЕРШЕНА!</b>\n\n"
@@ -55,7 +55,7 @@ async def complete_registration(message: Message, state: FSMContext):
              f"• Фамилия: <i>{last_name}</i>\n"
              f"• Email: <i>{email}</i>\n"
              f"• Телефон: <i>{phone}</i>\n\n\n\n"
-             f"• Запрос: <i>{user_requst}</i>\n\n"
+             f"• Запрос: <i>{user_request}</i>\n\n"
              f"Вы всегда можете вызвать команду /edit_profile и отредактировать любое поле!",
         parse_mode=ParseMode.HTML,
     )
@@ -217,7 +217,6 @@ async def reg_tel_manual_handler(message: Message, state: FSMContext):
     if phone_validation["is_valid"]:
         # Сохраняем телефон и завершаем регистрацию через общую функцию
         await state.update_data(phone=phone_validation["phone"])
-        await complete_registration(message, state)
         await ask_user_request(message, state)
     else:
         await message.answer(
@@ -234,33 +233,30 @@ async def reg_tel_get_handler(message: Message, state: FSMContext):
 
     # Сохраняем телефон и завершаем регистрацию через общую функцию
     await state.update_data(phone=phone)
-    await complete_registration(message, state)
     await ask_user_request(message, state)
 
 
-@router.callback_query(UserRequest.define_request, F.data == "no_button")
+@router.callback_query(RegistartionStates.define_request, F.data == "no_button")
 async def user_request_handler(callback: CallbackQuery, state: FSMContext):
     await complete_user_request(callback.message, state)
     await callback.answer()
-    await state.clear()
 
 
-@router.callback_query(UserRequest.define_request, F.data == "yes_button")
+
+@router.callback_query(RegistartionStates.define_request, F.data == "yes_button")
 async def user_request_handler(callback: CallbackQuery, state: FSMContext):
     task = (f"<b>🎯ЗАПРОС</b>\n\n"
-            f"Запрос в психологии — это то, с чем вы приходите к психологу, "
-            f"основная тема или проблема, которую вы хотите обсудить.\n\n"
-            f"Напишите ваш запрос ниже: ")
+            f"Введите запрос:  ")
 
     # TODO
     # Добавить новый текст , на случай если запрос был сделан ранее
 
-    await state.set_state(UserRequest.input_request)
+    await state.set_state(RegistartionStates.input_request)
     await callback.message.answer(task, parse_mode=ParseMode.HTML)
     await callback.answer()
 
 
-@router.message(UserRequest.input_request)
+@router.message(RegistartionStates.input_request)
 async def process_user_request(message: Message, state: FSMContext):
     """Обрабатываем и валидируем запрос пользователя"""
     user_input = message.text
@@ -270,7 +266,7 @@ async def process_user_request(message: Message, state: FSMContext):
 
     if request_validation["is_valid"]:
         await complete_user_request(message, state, request_validation["request"])
-        await state.clear()
+        await complete_registration()
     else:
         # Если запрос невалиден - просим исправить
         await message.answer(
