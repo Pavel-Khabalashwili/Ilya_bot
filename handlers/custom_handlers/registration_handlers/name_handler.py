@@ -33,16 +33,20 @@ async def ask_user_request(message: Message, state: FSMContext):
     )
 
 
-async def complete_registration(message: Message, state: FSMContext, phone: str):
+async def complete_registration(message: Message, state: FSMContext):
     """
     Общая функция для завершения регистрации
     Убирает дублирование кода
     """
     data = await state.get_data()
 
+    telegram_id = data["telegram_id"]
+    username_link = data["username_link"]
     name = data["name"]
     last_name = data["last_name"]
     email = data["email"]
+    phone = data["phone"]
+    user_requst = data.get("user_requst")
 
     await message.answer(
         text=f"<b>🎉 РЕГИСТРАЦИЯ ЗАВЕРШЕНА!</b>\n\n"
@@ -50,7 +54,8 @@ async def complete_registration(message: Message, state: FSMContext, phone: str)
              f"• Имя: <i>{name}</i>\n"
              f"• Фамилия: <i>{last_name}</i>\n"
              f"• Email: <i>{email}</i>\n"
-             f"• Телефон: <i>{phone}</i>\n\n"
+             f"• Телефон: <i>{phone}</i>\n\n\n\n"
+             f"• Запрос: <i>{user_requst}</i>\n\n"
              f"Вы всегда можете вызвать команду /edit_profile и отредактировать любое поле!",
         parse_mode=ParseMode.HTML,
     )
@@ -97,6 +102,12 @@ router = Router()
 @router.message(F.text == "РЕГИСТРАЦИЯ")
 async def reg_name_handler(message: Message, state: FSMContext):
     await state.set_state(RegistartionStates.name_state)
+
+    user = message.from_user
+    telegram_id = user.id
+    username_link = f"https://t.me/{user.username}" if user.username else "неопределенно"
+
+    await state.update_data(telegram_id=telegram_id, username_link=username_link)
 
     question = (f"<b>ЭТАП - 1: ПОДТВЕРЖДЕНИЕ ИМЕНИ</b>\n\n"
                 f"Использовать текущее ФИО: <i>{message.from_user.full_name}</i> ?")
@@ -185,7 +196,7 @@ async def reg_email_answer_handler(message: Message, state: FSMContext):
 
 
 @router.message(RegistartionStates.tel_number_state, F.text == "Ввести номер")
-async def reg_tel_manual_request_handler(message: Message, state: FSMContext):
+async def reg_tel_manual_request_handler(message: Message):
     """Обработчик кнопки 'Ввести вручную' - сразу показывает пример и просит ввести номер"""
     await message.answer(
         text=f"<b>ВВОД НОМЕРА ТЕЛЕФОНА</b>\n\n"
@@ -206,7 +217,7 @@ async def reg_tel_manual_handler(message: Message, state: FSMContext):
     if phone_validation["is_valid"]:
         # Сохраняем телефон и завершаем регистрацию через общую функцию
         await state.update_data(phone=phone_validation["phone"])
-        await complete_registration(message, state, phone_validation["phone"])
+        await complete_registration(message, state)
         await ask_user_request(message, state)
     else:
         await message.answer(
@@ -223,7 +234,7 @@ async def reg_tel_get_handler(message: Message, state: FSMContext):
 
     # Сохраняем телефон и завершаем регистрацию через общую функцию
     await state.update_data(phone=phone)
-    await complete_registration(message, state, phone)
+    await complete_registration(message, state)
     await ask_user_request(message, state)
 
 
