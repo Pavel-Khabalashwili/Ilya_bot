@@ -1,3 +1,6 @@
+#TODO Сделать кастомные ошибки (на случай если пользователь не найден, не создан и тд). Добавить логер
+from typing import Optional
+
 from sqlalchemy.orm import Session
 from database.engine import engine
 from database.models import Base, User, PsychologicalRequest
@@ -9,7 +12,7 @@ def create_tables():
     Base.metadata.create_all(bind=engine)
 
 
-def create_user(data: dict) -> User:
+def create_user(data: dict) :
     """
     Функция создания пользователя
     :param data: Словарь с данными пользователя
@@ -60,6 +63,8 @@ def create_user(data: dict) -> User:
 
 def show_all_data() -> None:
 
+    """Функция, которая выводит все данные из бд."""
+
     with DatabaseManager() as session:
         users = session.query(User).all()
 
@@ -97,6 +102,41 @@ def show_all_data() -> None:
 
             print("-" * 50)
 
+
+def update_user_field(telegram_id: int, field_name: str, new_value: str) -> Optional[bool]:
+    """
+    Универсальная функция для обновления 1 поля пользователя
+    :param telegram_id: ID пользователя в Telegram
+    :param field_name: Название поля (name, last_name, phone, email, profile_link)
+    :param new_value: Новое значение
+    """
+
+    with DatabaseManager() as session:
+
+        user = session.query(User).filter(User.telegram_id == telegram_id).first()
+
+        if not user:
+            print(f"❌ Пользователь с telegram_id {telegram_id} не найден")
+            return False
+
+        if not hasattr(user, field_name):
+            print(f"❌ Поле '{field_name}' не существует в таблице users")
+            return False
+
+
+        old_value = getattr(user, field_name)
+
+        setattr(user, field_name, new_value)
+
+        print(f"✅ Обновлено поле '{field_name}' для пользователя {user.name}:")
+        print(f"   Было: {old_value}")
+        print(f"   Стало: {new_value}")
+
+        return True
+
+
+
+
 if __name__ == '__main__':
     # create_tables()
     # test_data = {
@@ -111,5 +151,5 @@ if __name__ == '__main__':
     #
     # create_user(data=test_data)
 
-    show_all_data()
-
+    # show_all_data()
+    update_user_field(telegram_id=123456789, field_name="user_request", new_value="user_request")
