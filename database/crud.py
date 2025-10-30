@@ -35,7 +35,6 @@ def create_user(data: dict) :
             print(f" Пользователь с ID {telegram_id} уже существует")
             return None
 
-        # СОЗДАЕМ ПОЛЬЗОВАТЕЛЯ
         user = User(
             telegram_id=telegram_id,
             profile_link=profile_link,
@@ -126,6 +125,7 @@ def update_user_field(telegram_id: int, field_name: str, new_value: str) -> Opti
 
 
 if __name__ == '__main__':
+    # ТЕСТИРОВАНИЕ МОДУЛЯ
     create_tables()
     test_data = {
         "telegram_id": 123456789,
