@@ -1,5 +1,5 @@
 #TODO Сделать кастомные ошибки (на случай если пользователь не найден, не создан и тд). Добавить логер
-from typing import Optional
+from typing import Dict, Optional, Any
 
 from database.engine import engine
 from database.models import Base, User
@@ -11,7 +11,7 @@ def create_tables():
     Base.metadata.create_all(bind=engine)
 
 
-def create_user(data: dict) :
+def create_user(data: dict) -> None:
     """
     Функция создания пользователя
     :param data: Словарь с данными пользователя
@@ -122,23 +122,54 @@ def update_user_field(telegram_id: int, field_name: str, new_value: str) -> Opti
         return True
 
 
+def get_user(telegram_id: int) -> Optional[Dict[str, Any]]:
+    """
+    Функция для поиска пользщоватля по id.
+    Возвращает данные пользователя в виде словаря
+
+    :param telegram_id: telegram id пользователя
+    :return: словарь с данными о пользователе или None если не найден
+    """
+
+    with DatabaseManager() as session:
+        user = session.query(User).filter(User.telegram_id == telegram_id).first()
+
+        if not user:
+            #TODO сделать ошибку
+            print(f"❌ Пользователь с telegram_id {telegram_id} не найден")
+            return None
+
+        user_dict = {
+            "telegram_id": user.telegram_id,
+            "username_link": user.profile_link,
+            "name": user.name,
+            "last_name": user.last_name,
+            "phone": user.phone,
+            "email": user.email,
+            "user_request": user.user_request,
+            "created_at": user.created_at.isoformat()
+        }
+
+    return user_dict
 
 
 if __name__ == '__main__':
     # ТЕСТИРОВАНИЕ МОДУЛЯ
-    # create_tables()
-    # test_data = {
-    #     "telegram_id": 123456789,
-    #     "username_link": "https://t.me/test_user",
-    #     "name": "Тестовый",
-    #     "last_name": "Пользователь",
-    #     "phone": "+79991234567",
-    #     "email": "test@mail.ru",
-    #     "user_request": "Тестовый психологический запрос"
-    # }
+    create_tables()
+    test_data = {
+        "telegram_id": 123456789,
+        "username_link": "https://t.me/test_user",
+        "name": "Тестовый",
+        "last_name": "Пользователь",
+        "phone": "+79991234567",
+        "email": "test@mail.ru",
+        "user_request": "Тестовый психологический запрос"
+    }
 
-    # create_user(data=test_data)
+    create_user(data=test_data)
 
     show_all_data()
-    # update_user_field(telegram_id=123456789, field_name="name", new_value="NAME 1")
-    # update_user_field(telegram_id=123456789, field_name="user_request", new_value="user_request-test")
+    update_user_field(telegram_id=123456789, field_name="name", new_value="NAME 1")
+    update_user_field(telegram_id=123456789, field_name="user_request", new_value="user_request-test")
+
+    print(get_user(telegram_id=123456789))
