@@ -1,9 +1,8 @@
 #TODO Сделать кастомные ошибки (на случай если пользователь не найден, не создан и тд). Добавить логер
 from typing import Optional
 
-from sqlalchemy.orm import Session
 from database.engine import engine
-from database.models import Base, User, PsychologicalRequest
+from database.models import Base, User
 from database.manager import DatabaseManager
 
 
@@ -44,21 +43,15 @@ def create_user(data: dict) :
             last_name=last_name,
             phone=phone,
             email=email,
+            user_request=user_request
         )
         session.add(user)
-        session.flush()  #  получаем user.id
 
-        # ЕСЛИ ЕСТЬ ЗАПРОС - СОЗДАЕМ ЕГО
-        if user_request:
-            request = PsychologicalRequest(
-                request_text=user_request,
-                user_id=user.id
-            )
-            session.add(request)
+
 
         print(f"✅ Создан пользователь: {user}")
         if user_request:
-            print(f"✅ Создан запрос: {request}")
+            print(f"✅ Создан запрос: {user_request}")
 
 
 def show_all_data() -> None:
@@ -90,15 +83,10 @@ def show_all_data() -> None:
             print(f"   Дата регистрации: {user.created_at}")
 
             # Выводим запросы пользователя
-            if user.user_requests:
-                print(f"   📝 Запросов: {len(user.user_requests)}")
-                for i, request in enumerate(user.user_requests, 1):
-                    status = "🟢 Активный" if request.status else "🔴 Завершен"
-                    print(f"      {i}. Запрос #{request.id} ({status}):")
-                    print(f"         Текст: {request.request_text}")
-                    print(f"         Создан: {request.created_at}")
+            if user.user_request:
+                print(f"   📝 Запрос: {user.user_request}")
             else:
-                print(f"   📝 Запросов: 0")
+                print(f"   📝 Запроса нет")
 
             print("-" * 50)
 
@@ -138,18 +126,19 @@ def update_user_field(telegram_id: int, field_name: str, new_value: str) -> Opti
 
 
 if __name__ == '__main__':
-    # create_tables()
-    # test_data = {
-    #     "telegram_id": 123456789,
-    #     "username_link": "https://t.me/test_user",
-    #     "name": "Тестовый",
-    #     "last_name": "Пользователь",
-    #     "phone": "+79991234567",
-    #     "email": "test@mail.ru",
-    #     "user_request": "Тестовый психологический запрос"
-    # }
-    #
-    # create_user(data=test_data)
+    create_tables()
+    test_data = {
+        "telegram_id": 123456789,
+        "username_link": "https://t.me/test_user",
+        "name": "Тестовый",
+        "last_name": "Пользователь",
+        "phone": "+79991234567",
+        "email": "test@mail.ru",
+        "user_request": "Тестовый психологический запрос"
+    }
 
-    # show_all_data()
-    update_user_field(telegram_id=123456789, field_name="user_request", new_value="user_request")
+    create_user(data=test_data)
+
+    show_all_data()
+    update_user_field(telegram_id=123456789, field_name="name", new_value="NAME 1")
+    update_user_field(telegram_id=123456789, field_name="user_request", new_value="user_request-test")
