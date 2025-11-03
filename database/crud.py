@@ -45,8 +45,7 @@ def create_user(data: dict) -> None:
             user_request=user_request
         )
         session.add(user)
-
-
+        session.commit()
 
         print(f"✅ Создан пользователь: {user}")
         if user_request:
@@ -115,6 +114,8 @@ def update_user_field(telegram_id: int, field_name: str, new_value: str) -> Opti
 
         setattr(user, field_name, new_value)
 
+        session.commit()
+
         print(f"✅ Обновлено поле '{field_name}' для пользователя {user.name}:")
         print(f"   Было: {old_value}")
         print(f"   Стало: {new_value}")
@@ -155,21 +156,21 @@ def get_user(telegram_id: int) -> Optional[Dict[str, Any]]:
 
 if __name__ == '__main__':
     # ТЕСТИРОВАНИЕ МОДУЛЯ
-    create_tables()
-    test_data = {
-        "telegram_id": 123456789,
-        "username_link": "https://t.me/test_user",
-        "name": "Тестовый",
-        "last_name": "Пользователь",
-        "phone": "+79991234567",
-        "email": "test@mail.ru",
-        "user_request": "Тестовый психологический запрос"
-    }
-
-    create_user(data=test_data)
+    # create_tables()
+    # test_data = {
+    #     "telegram_id": 123456789,
+    #     "username_link": "https://t.me/test_user",
+    #     "name": "Тестовый",
+    #     "last_name": "Пользователь",
+    #     "phone": "+79991234567",
+    #     "email": "test@mail.ru",
+    #     "user_request": "Тестовый психологический запрос"
+    # }
+    #
+    # create_user(data=test_data)
 
     show_all_data()
-    update_user_field(telegram_id=123456789, field_name="name", new_value="NAME 1")
-    update_user_field(telegram_id=123456789, field_name="user_request", new_value="user_request-test")
-
-    print(get_user(telegram_id=123456789))
+    # update_user_field(telegram_id=123456789, field_name="name", new_value="NAME 1")
+    # update_user_field(telegram_id=123456789, field_name="user_request", new_value="user_request-test")
+    #
+    # print(get_user(telegram_id=123456789))

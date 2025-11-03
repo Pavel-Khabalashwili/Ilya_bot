@@ -5,6 +5,7 @@ from aiogram.fsm.context import FSMContext
 from states import EditProfileStates
 from aiogram.enums import ParseMode
 
+from database.crud import update_user_field, get_user
 from keyboards import edit_profile_keyboard, telephone_keyboard
 from utils.validators import (validate_email,
                               validate_name,
@@ -16,7 +17,34 @@ edit_router = Router()
 
 
 async def return_to_edit_menu(message: Message, state: FSMContext, success_message: str = None) -> None:
-    """Возвращает пользователя в меню редактирования профиля."""
+    """Возвращает пользователя в меню редактирования профиля и обновляет БД."""
+
+    # ПОЛУЧАЕМ ВСЕ ДАННЫЕ ИЗ СОСТОЯНИЯ
+    user_data = await state.get_data()
+
+    # ОПРЕДЕЛЯЕМ КАКОЕ ПОЛЕ ИЗМЕНИЛОСЬ (по текущему состоянию FSM)
+    current_state = await state.get_state()
+
+    field_mapping = {
+        'EditProfileStates:editing_name': 'name',
+        'EditProfileStates:editing_last_name': 'last_name',
+        'EditProfileStates:editing_email': 'email',
+        'EditProfileStates:editing_phone': 'phone',
+        'EditProfileStates:editing_request': 'user_request'
+    }
+
+    changed_field = field_mapping.get(current_state)
+
+    # ЕСЛИ ЕСТЬ ИЗМЕНЕННОЕ ПОЛЕ - ОБНОВЛЯЕМ БД
+    if changed_field and changed_field in user_data:
+        new_value = user_data[changed_field]
+
+        update_user_field(
+            telegram_id=message.from_user.id,
+            field_name=changed_field,
+            new_value=new_value
+        )
+
     if success_message:
         await message.answer(success_message, parse_mode="HTML")
 
@@ -26,7 +54,6 @@ async def return_to_edit_menu(message: Message, state: FSMContext, success_messa
         reply_markup=edit_profile_keyboard,
         parse_mode="HTML"
     )
-
 
 @edit_router.message(Command("edit_profile"))
 async def edit_profile_start(message: Message, state: FSMContext) -> None:
@@ -197,7 +224,7 @@ async def edit_request_process(message: Message, state: FSMContext) -> None:
     """Обрабатывает ввод нового запроса."""
     validation: dict = validate_request_comprehensive(message.text)
     if validation["is_valid"]:
-        await state.update_data(request=message.text)
+        await state.update_data(user_request=message.text)
         await return_to_edit_menu(
             message,
             state,
@@ -210,7 +237,7 @@ async def edit_request_process(message: Message, state: FSMContext) -> None:
 @edit_router.callback_query(EditProfileStates.choose_field, F.data == "show_data")
 async def show_all_data(callback: CallbackQuery, state: FSMContext) -> None:
     """Показывает все данные пользователя."""
-    user_data: dict = await state.get_data()
+    user_data: dict = get_user(telegram_id=callback.from_user.id)
 
     data_message: str = (
         f"<b>📊 ВАШИ ДАННЫЕ:</b>\n\n"
@@ -218,8 +245,7 @@ async def show_all_data(callback: CallbackQuery, state: FSMContext) -> None:
         f"👥 <b>Фамилия:</b> {user_data.get('last_name', 'Не указана')}\n"
         f"📧 <b>Email:</b> {user_data.get('email', 'Не указан')}\n"
         f"📱 <b>Телефон:</b> {user_data.get('phone', 'Не указан')}\n"
-        f"🎯 <b>Запрос:</b> {user_data.get('request', 'Не указан')}\n\n"
-        f"<i>💡 В будущем данные будут загружаться из базы данных</i>"
+        f"🎯 <b>Запрос:</b> {user_data.get('user_request', 'Не указан')}\n\n"
     )
 
     await callback.message.answer(data_message, parse_mode=ParseMode.HTML)
