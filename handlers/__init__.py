@@ -8,7 +8,7 @@ def register_handlers(dispatcher: Dispatcher):
     """
     Регистрирует все обработчики в диспетчере.
     """
-    dispatcher.include_router(custom_handlers.reg_name_router)
+    dispatcher.include_router(custom_handlers.)
 
     dispatcher.include_router(custom_handlers.edit_router)
 

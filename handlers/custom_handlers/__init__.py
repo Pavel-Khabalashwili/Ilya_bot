@@ -1,2 +1,2 @@
-from .registration_handlers import reg_name_router
+from .registration_handlers import reg_name_handler
 from .edit_profile_hanflers import edit_router
